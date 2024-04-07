@@ -6,7 +6,7 @@ import arcade
 # Constants
 SCREEN_WIDTH = 1000
 SCREEN_HEIGHT = 650
-SCREEN_TITLE = "Platformer"
+SCREEN_TITLE = "Космические приключения"
 
 
 # Constants used to scale our sprites from their original size
@@ -40,7 +40,7 @@ class MyGame(arcade.Window):
         # Separate variable that holds the player sprite
         self.player_sprite = None
 
-        arcade.set_background_color(arcade.csscolor.CORNFLOWER_BLUE)
+        arcade.set_background_color(arcade.color.BUBBLE_GUM)
 
 
     def setup(self):
