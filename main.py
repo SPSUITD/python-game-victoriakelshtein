@@ -57,13 +57,13 @@ class MyGame(arcade.Window):
 
         # Set up the player, specifically placing it at these coordinates.
 
-        image_source = ":resources:images/animated_characters/female_adventurer/femaleAdventurer_idle.png"
+        image_source = "img/cat.png"
 
         self.player_sprite = arcade.Sprite(image_source, CHARACTER_SCALING)
 
-        self.player_sprite.center_x = 64
+        self.player_sprite.center_x = 100
 
-        self.player_sprite.center_y = 128
+        self.player_sprite.center_y = 180
 
         self.player_list.append(self.player_sprite)
 
@@ -73,15 +73,6 @@ class MyGame(arcade.Window):
 
         # This shows using a loop to place multiple sprites horizontally
 
-        for x in range(0, 1250, 64):
-
-            wall = arcade.Sprite(":resources:images/tiles/grassMid.png", TILE_SCALING)
-
-            wall.center_x = x
-
-            wall.center_y = 32
-
-            self.wall_list.append(wall)
 
 
 
@@ -89,7 +80,7 @@ class MyGame(arcade.Window):
 
         # This shows using a coordinate list to place sprites
 
-        coordinate_list = [[512, 96], [256, 96], [768, 96]]
+        coordinate_list = [[420, 50], [100, 90], [400, 400], [500, 250], [290, 180], [110, 340], [220, 500]]
 
 
 
@@ -99,7 +90,7 @@ class MyGame(arcade.Window):
 
             wall = arcade.Sprite(
 
-                ":resources:images/tiles/boxCrate_double.png", TILE_SCALING
+                "img/fon.png", TILE_SCALING
 
             )
 
