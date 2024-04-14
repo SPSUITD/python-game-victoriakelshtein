@@ -129,15 +129,16 @@ class MyGame(arcade.Window):
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed."""
 
-        if key == arcade.key.UP or key == arcade.key.W:
-            self.player_jump == True
-            self.jump_start = self.player_sprite.center_y
-        elif key == arcade.key.DOWN or key == arcade.key.S:
-            self.player_sprite.center_y -= 15
-        elif key == arcade.key.LEFT or key == arcade.key.A:
+        if key == arcade.key.LEFT or key == arcade.key.A:
             self.player_sprite.center_x -= 15
         elif key == arcade.key.RIGHT or key == arcade.key.D:
             self.player_sprite.center_x += 15 
+        elif key == arcade.key.DOWN or key == arcade.key.S:
+            self.player_sprite.center_y -= 15
+        elif key == arcade.key.UP or key == arcade.key.W:
+            self.player_jump == True
+            self.jump_start = self.player_sprite.center_y
+        
             # управление котом
 
     
