@@ -1,9 +1,9 @@
 import arcade
 import random
 
-# Constants
+# Константы
 SCREEN_WIDTH = 600
-SCREEN_HEIGHT = 800
+SCREEN_HEIGHT = 700
 SCREEN_TITLE = "Космические приключения"
 
 # Константы, используемые для масштабирования наших спрайтов по сравнению с их первоначальным размером
@@ -11,6 +11,8 @@ CHARACTER_SCALING = 1
 TILE_SCALING = 0.5
 JUMP_MAX_HEIGHT = 150
 GRAVITY = 2
+MAX_JUMPS = 2  # Максимальное количество прыжков
+LOSS_HEIGHT = 300  # Высота, на которую игрок должен упасть, чтобы проиграть
 
 class GameOverView(arcade.View):
     def __init__(self, game_view):
@@ -24,15 +26,14 @@ class GameOverView(arcade.View):
         arcade.start_render()
         arcade.draw_text("Конец игры", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 50,
                         arcade.color.BLACK, font_size=50, anchor_x="center")
-        arcade.draw_text(f"Ваш рекорд: {int(self.game_view.player_y)}", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2,
+        arcade.draw_text(f"Ваш рекорд: {int(self.game_view.high_score)}", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2,
                         arcade.color.BLACK, font_size=20, anchor_x="center")
         arcade.draw_text("Нажмите, чтобы начать заново", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 50,
                         arcade.color.BLACK, font_size=20, anchor_x="center")
 
     def on_mouse_press(self, _x, _y, _button, _modifiers):
-        game_view = self.game_view
-        game_view.setup()
-        self.window.show_view(game_view)
+        self.game_view.restart_game()
+        self.window.show_view(self.game_view)
 
 class MyGame(arcade.View):
     """
@@ -53,6 +54,8 @@ class MyGame(arcade.View):
         self.score = 0
         self.moving_left = False
         self.moving_right = False
+        self.jump_count = 0  # Счетчик количества прыжков
+        self.high_score = 0  # Самый высокий результат в текущей сессии
 
         self.game_over_view = None
 
@@ -77,13 +80,13 @@ class MyGame(arcade.View):
         image_source = "img/cat.png"
         self.player_sprite = arcade.Sprite(image_source, CHARACTER_SCALING)
         self.player_sprite.center_x = SCREEN_WIDTH / 2
-        self.player_sprite.center_y = main_platform.top + self.player_sprite.height / 2
+        self.player_sprite.center_y = main_platform.top + self.player_sprite.height / 2 + 1  # Увеличиваем высоту, чтобы игрок не подтягивался
         self.player_list.append(self.player_sprite)
 
         # Создаем остальные случайные платформы
-        for i in range(5):
+        for i in range(8):
             wall = arcade.Sprite("img/fon.png", TILE_SCALING)
-            wall.position = random.randrange(SCREEN_WIDTH), i * 100 + main_platform.top + 100
+            wall.position = random.randrange(SCREEN_WIDTH), i * 80 + main_platform.top + 80
             wall.width = 100
             wall.height = 20
             wall.center_y += 10
@@ -95,9 +98,15 @@ class MyGame(arcade.View):
         """Restart the game"""
         self.setup()
         self.player_y = 0  # Сбросить рекорд
+        self.jump_count = 0  # Сбросить счетчик прыжков
+        # Обновляем самый высокий результат
+        self.high_score = max(self.high_score, self.player_y)
         self.center_camera_to_player()  # Установить камеру на игрока
         self.window.show_view(self.game_over_view)
-        self.center_camera_to_player()  # Опустить камеру вниз после перезапуска игры
+        # Опустить камеру вниз после перезапуска игры
+        self.camera.move_to((0, 0))
+        self.camera.use()
+        self.camera.update()
 
     def on_draw(self):
         """Render the screen."""
@@ -117,11 +126,19 @@ class MyGame(arcade.View):
         """Center the camera on the player"""
         screen_center_x = self.player_sprite.center_x - (self.camera.viewport_width / 2)
         screen_center_y = self.player_sprite.center_y - (self.camera.viewport_height / 2)
+        
+        # Ограничение камеры по горизонтали
         if screen_center_x < 0:
             screen_center_x = 0
+        elif screen_center_x > SCREEN_WIDTH - self.camera.viewport_width:
+            screen_center_x = SCREEN_WIDTH - self.camera.viewport_width
+        
+        # Ограничение камеры по вертикали
         if screen_center_y < 0:
             screen_center_y = 0
+        
         self.camera.move_to((screen_center_x, screen_center_y))
+
 
     def on_update(self, delta_time):
         """Movement and game logic"""
@@ -138,16 +155,17 @@ class MyGame(arcade.View):
         on_platform = False
         for wall in self.wall_list:
             if arcade.check_for_collision(self.player_sprite, wall):
-                if self.player_sprite.bottom <= wall.top and self.player_sprite.center_y >= wall.top:
-                    self.player_sprite.center_y = wall.top + self.player_sprite.height / 2
+                if self.player_sprite.bottom <= wall.top and self.player_sprite.bottom + 6 >= wall.top:  # Изменяем условие проверки столкновения
+                    self.player_sprite.center_y += (wall.top - self.player_sprite.bottom)
                     on_platform = True
                     self.player_jump = False
+                    self.jump_count = 0  # Сбросить счетчик прыжков
                     break
 
         if not on_platform:
             self.player_sprite.center_y -= GRAVITY
 
-        if self.player_sprite.center_y < self.player_y - JUMP_MAX_HEIGHT:
+        if self.player_sprite.center_y < self.player_y - LOSS_HEIGHT:  # Игрок упал на 300 пунктов от достигнутой высоты
             self.restart_game()
 
         if self.player_sprite.center_x - self.player_sprite.width / 2 <= 0:
@@ -169,6 +187,8 @@ class MyGame(arcade.View):
         self.create_random_platforms()
         self.center_camera_to_player()
 
+        # Обновляем самый высокий результат
+        self.high_score = max(self.high_score, self.player_y)
 
     def create_random_platforms(self):
         top_platform = max([wall.top for wall in self.wall_list])
@@ -193,9 +213,10 @@ class MyGame(arcade.View):
         elif key == arcade.key.RIGHT or key == arcade.key.D:
             self.moving_right = True
         elif key == arcade.key.UP or key == arcade.key.SPACE:
-            if not self.player_jump:
+            if self.jump_count < MAX_JUMPS:  # Проверяем количество совершенных прыжков
                 self.player_jump = True
                 self.jump_start = self.player_sprite.center_y
+                self.jump_count += 1  # Увеличиваем счетчик прыжков
 
     def on_key_release(self, key, modifiers):
         if key == arcade.key.LEFT or key == arcade.key.A:
