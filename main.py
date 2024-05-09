@@ -18,6 +18,8 @@ class GameOverView(arcade.View):
     def __init__(self, game_view):
         super().__init__()
         self.game_view = game_view
+        self.hover_text = None  
+        self.hover_color = arcade.color.YELLOW
 
     def on_show(self):
         arcade.set_background_color(arcade.color.BUBBLE_GUM)
@@ -25,21 +27,40 @@ class GameOverView(arcade.View):
     def on_draw(self):
         arcade.start_render()
         arcade.draw_text("Конец игры", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 50,
-                        arcade.color.BLACK, font_size=50, anchor_x="center")
+                        arcade.color.RED if self.hover_text == "Конец игры" else arcade.color.BLACK,
+                        font_size=50, anchor_x="center")
         arcade.draw_text(f"Топ: {int(self.game_view.high_score)}", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2,
-                        arcade.color.BLACK, font_size=20, anchor_x="center")
+                        arcade.color.RED if self.hover_text == "Топ: ..." else arcade.color.BLACK,
+                        font_size=20, anchor_x="center")
 
         arcade.draw_text("Таблица рекордов:", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 100,
-                        arcade.color.BLACK, font_size=20, anchor_x="center")
+                        arcade.color.RED if self.hover_text == "Таблица рекордов:" else arcade.color.BLACK,
+                        font_size=20, anchor_x="center")
 
         records = sorted(self.game_view.results, key=lambda x: x["score"], reverse=True)[:RECORDS_DISPLAY_LIMIT]
         y_offset = SCREEN_HEIGHT / 2 - 150
         for i, record in enumerate(records):
-            arcade.draw_text(f"{i+1}. {record['score']}", SCREEN_WIDTH / 2, y_offset - i * 30,
-                            arcade.color.BLACK, font_size=16, anchor_x="center")
+            text = f"{i+1}. {record['score']}"
+            color = arcade.color.RED if self.hover_text == text else arcade.color.BLACK
+            arcade.draw_text(text, SCREEN_WIDTH / 2, y_offset - i * 30,
+                            color, font_size=16, anchor_x="center")
 
         arcade.draw_text("Нажмите, чтобы начать заново", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 40,
-                        arcade.color.BLACK, font_size=20, anchor_x="center")
+                        arcade.color.RED if self.hover_text == "Нажмите, чтобы начать заново" else arcade.color.BLACK,
+                        font_size=20, anchor_x="center")
+
+    def on_mouse_motion(self, x, y, dx, dy):
+        # Определение текста, на который указывает курсор мыши
+        self.hover_text = None
+        if SCREEN_WIDTH / 2 - 160 <= x <= SCREEN_WIDTH / 2 + 160:
+            if SCREEN_HEIGHT / 2 + 50 - 25 <= y <= SCREEN_HEIGHT / 2 + 50 + 25:
+                self.hover_text = "Конец игры"
+            elif SCREEN_HEIGHT / 2 - 25 <= y <= SCREEN_HEIGHT / 2 + 25:
+                self.hover_text = "Топ: ..."
+            elif SCREEN_HEIGHT / 2 - 100 - 25 <= y <= SCREEN_HEIGHT / 2 - 100 + 25:
+                self.hover_text = "Таблица рекордов:"
+            elif SCREEN_HEIGHT / 2 - 40 - 25 <= y <= SCREEN_HEIGHT / 2 - 40 + 25:
+                self.hover_text = "Нажмите, чтобы начать заново"
 
     def on_mouse_press(self, _x, _y, _button, _modifiers):
         self.game_view.restart_game()
@@ -48,7 +69,7 @@ class GameOverView(arcade.View):
 class MyGame(arcade.View):
     def __init__(self):
         super().__init__()
-
+        self.jump_animation_timer = 0
         self.wall_list = None
         self.player_list = None
         self.player_sprite = None
@@ -126,6 +147,16 @@ class MyGame(arcade.View):
         self.clear()
 
         self.wall_list.draw()
+
+        # Отрисовываем игрока в зависимости от того, идет ли анимация прыжка
+        if self.jump_animation_timer > 0:
+            # Отрисовываем спрайт анимации прыжка
+            # Замените "jump_sprite.png" на ваш спрайт анимации прыжка
+            self.player_sprite.texture = arcade.load_texture("img/jump_sprite.png")
+        else:
+            # Отрисовываем основной спрайт игрока
+            self.player_sprite.texture = arcade.load_texture("img/cat.png")
+
         self.player_list.draw()
 
         text = f"рекорд: {int(self.player_y)}"
@@ -150,6 +181,12 @@ class MyGame(arcade.View):
         self.camera.move_to((screen_center_x, screen_center_y))
 
     def on_update(self, delta_time):
+        # Обновляем таймер анимации прыжка
+        if self.jump_animation_timer > 0:
+            self.jump_animation_timer -= delta_time
+            if self.jump_animation_timer < 0:
+                self.jump_animation_timer = 0
+
         if self.player_jump and self.jump_start is not None:
             self.player_sprite.center_y += 6
             self.player_y = max(self.player_y, self.player_sprite.center_y)
@@ -223,6 +260,8 @@ class MyGame(arcade.View):
                 self.player_jump = True
                 self.jump_start = self.player_sprite.center_y
                 self.jump_count += 1
+                # Запускаем таймер анимации прыжка
+                self.jump_animation_timer = 0.1  # Устанавливаем таймер анимации прыжка
 
     def on_key_release(self, key, modifiers):
         if key == arcade.key.LEFT or key == arcade.key.A:
